@@ -4,17 +4,19 @@
 # If it's divisible by both 3 and 5, print CracklePop instead of the number.
 # You can use any language.
 
-def crackle_pop(range, crackle: 3, pop: 5)
-  range.map do |i|
-    crackled = divisible_by?(i, crackle)
-    popped = divisible_by?(i, pop)
-
-    line = "#{"Crackle" if crackled}#{"Pop" if popped}#{i.to_s if not crackled and not popped}"
+class Integer
+  def divisible_by?(divisor)
+    self % divisor == 0
   end
 end
 
-def divisible_by?(x, y)
-  x % y == 0
+def crackle_pop(range, crackle: 3, pop: 5)
+  range.map do |i|
+    crackled = i.divisible_by? crackle
+    popped = i.divisible_by? pop
+
+    "#{"Crackle" if crackled}#{"Pop" if popped}#{i.to_s if not crackled and not popped}"
+  end
 end
 
 @test_num = 1
