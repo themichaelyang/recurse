@@ -9,7 +9,9 @@
 # Useful reference: https://norvig.com/lispy.html
 
 SPACE = " "
+QUOTE = '"'
 PARENS = ["(", ")"]
+NEWLINE = "\n"
 EOF = "EOF"
 
 class Tokenizer
@@ -23,21 +25,47 @@ class Tokenizer
   end
 
   def tokenize
-    @chars.each do |char|
+    i = 0
+
+    while i < @chars.length
+      char = @chars[i]
       case char
       when SPACE
         flush_current_token!
       when *PARENS
         flush_current_token!
         add_token!(char)
+      when QUOTE
+        i = tokenize_string(i)
       when EOF
         flush_current_token!
       else
         @current_token.append(char)
       end
+
+      i += 1
     end
 
     @tokens
+  end
+
+  def tokenize_string(i)
+    @current_token.append(@chars[i])
+
+    i = i + 1
+    while @chars[i] != '"'
+      if @chars[i] == EOF || @chars[i] == NEWLINE
+        raise "Unescaped string at char #{i}"
+      end
+
+      @current_token.append(@chars[i])
+      i = i + 1
+    end
+
+    @current_token.append(@chars[i])
+    flush_current_token!
+
+    i
   end
 
   def reset_current_token!
@@ -47,12 +75,18 @@ class Tokenizer
   def add_token!(token) 
     @tokens.append(token)
   end
-
+  
   def flush_current_token!
     if !(@current_token.empty?)
       add_token!(@current_token.join)
       reset_current_token!
     end
+  end
+end
+
+def Parser
+  def initialize(tokens)
+    
   end
 end
 
@@ -62,6 +96,9 @@ class Testing
     assert_equals(Tokenizer.new("(+ 1 2)").tokenize, ["(", "+", "1", "2", ")"])
     assert_equals(Tokenizer.new("(+ (+ 1 2) 34)").tokenize, ["(", "+", "(", "+", "1", "2", ")", "34", ")"])
     assert_equals(Tokenizer.new('(append "abc" "def")').tokenize, ["(", "append", '"abc"', '"def"', ")"])
+    assert_equals(Tokenizer.new('"hello world"').tokenize, ['"hello world"'])
+    assert_equals(Tokenizer.new('(append "hello world" " michael!")').tokenize, ["(", "append", '"hello world"', '" michael!"', ")"])
+    assert_equals(Tokenizer.new('("1 + 2")').tokenize, ["(", '"1 + 2"', ")"])
   end
 
   def self.assert_equals(actual, expected)
