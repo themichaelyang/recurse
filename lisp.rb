@@ -18,6 +18,10 @@ NEWLINE = "\n"
 # Not a token, only used by Tokenizer as a sentinel
 EOF = "EOF"
 
+# Produces tokens of:
+# - Parenthesis: ( )
+# - Symbols and Numbers: tomato, 42.
+# - String literals: "hello world"
 class Tokenizer
   def initialize(code)
     @tokens = []
@@ -106,7 +110,7 @@ end
 # ...
 # S-expr[n]
 #
-# (yes, atoms would get discarded, but think of a REPL)
+# (atoms would get discarded, but think of a REPL)
 #
 # S-expr ("Symbolic Expression") is either:
 # - Expression: (Symbol S-expr[0] ... S-expr[n])
@@ -121,12 +125,10 @@ end
 #================
 
 # Different class for Expression and Program so we can distinguish them.
-class Expression < Array
-end
+class Expression < Array; end
 
 # A list of S-expr at the "top level"
-class Program < Array
-end
+class Program < Array; end
 
 # parse_XY returns [XY, last_index], so we can resume from the next relevant token
 class Parser
@@ -205,6 +207,10 @@ class Parser
   end
 end
 
+class Interpreter
+  # TODO for interview
+end
+
 class Testing
   def self.debug_puts(*params)
     if @debug
@@ -228,6 +234,7 @@ class Testing
     assert_equals(Parser.new("(+ 1 2 3)").parse, [[:+, 1, 2, 3]])
     assert_equals(Parser.new("(+ 1 (+ 2 3))").parse, [[:+, 1, [:+, 2, 3]]])
     assert_equals(Parser.new('(append "hello world" " michael!")').parse, [[:append, "hello world", " michael!"]])
+    assert_equals(Parser.new("(+ (* 1 2 3) (- 4 5) (/ 6 7))").parse, [[:+, [:*, 1, 2, 3], [:-, 4, 5], [:/, 6, 7]]])
     assert_equals(Parser.new("123").parse, [123])
   end
 
