@@ -14,6 +14,8 @@ OPEN_PAREN = "("
 CLOSE_PAREN = ")"
 PARENS = [OPEN_PAREN, CLOSE_PAREN]
 NEWLINE = "\n"
+
+# Not a token, only used by Tokenizer as a sentinel
 EOF = "EOF"
 
 class Tokenizer
@@ -97,8 +99,17 @@ class Lexer
   end
 end
 
-# S-expr is either:
-# - (Symbol S-expr[0] ... S-expr[n])
+#=== Grammar ====
+# 
+# Program is:
+# S-expr[0]
+# ...
+# S-expr[n]
+#
+# (yes, atoms would get discarded, but think of a REPL)
+#
+# S-expr ("Symbolic Expression") is either:
+# - Expression: (Symbol S-expr[0] ... S-expr[n])
 # - Atom
 # 
 # Atom is either:
@@ -106,7 +117,18 @@ end
 # - Number literal
 # - Boolean literal
 # - Symbol
+#
+#================
 
+# Different class for Expression and Program so we can distinguish them.
+class Expression < Array
+end
+
+# A list of S-expr at the "top level"
+class Program < Array
+end
+
+# parse_XY returns [XY, last_index], so we can resume from the next relevant token
 class Parser
   def initialize(code)
     @code = code
@@ -114,22 +136,82 @@ class Parser
   end
 
   def parse
-    # ...
+    parse_program(@tokens)
   end
 
-  def parse_atom(token)
-    if Lexer.integer_literal?(token)
+  def parse_program(tokens)
+    program = Program.new
+    i = 0
+    token = tokens[i]
+
+    until token.nil?
+      s_expr, i = parse_symbolic_expression(@tokens, 0)
+      program.append(s_expr)
+      i += 1
+      token = tokens[i]
+    end
+
+    program
+  end
+
+  # Note to self about Norvig's `read_from_tokens` ~> this method is a bit 
+  # too clever (for me) to be extended cleanly. It relies on CLOSE_PAREN being
+  # a String and being returned by atom() for L.append(read_from_tokens(tokens)) 
+  # to close the Expression. Also, I found the pop (shift in Ruby) too hard to
+  # keep track of.
+  def parse_symbolic_expression(tokens, i)
+    token = tokens[i]
+
+    if token == OPEN_PAREN
+      parse_expression(tokens, i)
+    else
+      parse_atom(tokens, i)
+    end
+  end
+
+  # Start on OPEN_PAREN, end on CLOSE_PAREN
+  def parse_expression(tokens, i)
+    expr = Expression.new
+    _open_paren = tokens[i]
+
+    i += 1
+    token = tokens[i]
+
+    until token == CLOSE_PAREN
+      atom_or_subexpr, i = parse_symbolic_expression(tokens, i)
+      expr.append(atom_or_subexpr)
+
+      i += 1
+      token = tokens[i]
+    end
+
+    [expr, i]
+  end
+
+  def parse_atom(tokens, i)
+    token = tokens[i]
+    Testing.debug_puts "#{__method__}: #{token}"
+
+    atom = if Lexer.integer_literal?(token)
       token.to_i
-    elsif Lexer.string_literal(token)
+    elsif Lexer.string_literal?(token)
       # Remove quotes
       token[1...-1]
     else
       token.to_sym
     end
+
+    [atom, i]
   end
 end
 
 class Testing
+  def self.debug_puts(*params)
+    if @debug
+      puts(params)
+    end
+  end
+
   def self.test_tokenizer
     assert_equals(Tokenizer.new("123").tokenize, ["123"])
     assert_equals(Tokenizer.new("(+ 1 2)").tokenize, ["(", "+", "1", "2", ")"])
@@ -141,9 +223,12 @@ class Testing
   end
 
   def self.test_parser
-    assert_equals(Parser.new("123").parse, 123)
-    assert_equals(Parser.new("(123)").parse, [123])
-    assert_equals(Parser.new("(+ 1 2)").parse, [:+, 1, 2])
+    assert_equals(Parser.new("(123)").parse, [[123]])
+    assert_equals(Parser.new("(+ 1 2)").parse, [[:+, 1, 2]])
+    assert_equals(Parser.new("(+ 1 2 3)").parse, [[:+, 1, 2, 3]])
+    assert_equals(Parser.new("(+ 1 (+ 2 3))").parse, [[:+, 1, [:+, 2, 3]]])
+    assert_equals(Parser.new('(append "hello world" " michael!")').parse, [[:append, "hello world", " michael!"]])
+    assert_equals(Parser.new("123").parse, [123])
   end
 
   def self.assert_equals(actual, expected)
@@ -179,6 +264,10 @@ class Testing
     end
   end
 
+  def self.enable_debug!
+    @debug = true
+  end
+
   def self.reset_state!
     @@assertion_num = 0
     @@assertions_passed = 0
@@ -186,6 +275,10 @@ class Testing
 end
 
 def main
+  if ARGV.include? "--debug"
+    Testing.enable_debug!
+  end
+
   if ARGV.include? "--test"
     Testing.test
   end
