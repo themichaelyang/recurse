@@ -10,7 +10,9 @@
 
 SPACE = " "
 QUOTE = '"'
-PARENS = ["(", ")"]
+OPEN_PAREN = "("
+CLOSE_PAREN = ")"
+PARENS = [OPEN_PAREN, CLOSE_PAREN]
 NEWLINE = "\n"
 EOF = "EOF"
 
@@ -50,12 +52,13 @@ class Tokenizer
   end
 
   def tokenize_string(i)
+    initial = i
     @current_token.append(@chars[i])
 
     i = i + 1
-    while @chars[i] != '"'
+    while @chars[i] != QUOTE
       if @chars[i] == EOF || @chars[i] == NEWLINE
-        raise "Unescaped string at char #{i}"
+        raise "Unclosed string at char #{initial}"
       end
 
       @current_token.append(@chars[i])
@@ -84,9 +87,45 @@ class Tokenizer
   end
 end
 
-def Parser
-  def initialize(tokens)
-    
+class Lexer
+  def self.integer_literal?(str)
+    str.to_i.to_s == str
+  end
+
+  def self.string_literal?(str)
+    str.start_with?('"') && str.end_with?('"')
+  end
+end
+
+# S-expr is either:
+# - (Symbol S-expr[0] ... S-expr[n])
+# - Atom
+# 
+# Atom is either:
+# - String literal
+# - Number literal
+# - Boolean literal
+# - Symbol
+
+class Parser
+  def initialize(code)
+    @code = code
+    @tokens = Tokenizer.new(code).tokenize
+  end
+
+  def parse
+    # ...
+  end
+
+  def parse_atom(token)
+    if Lexer.integer_literal?(token)
+      token.to_i
+    elsif Lexer.string_literal(token)
+      # Remove quotes
+      token[1...-1]
+    else
+      token.to_sym
+    end
   end
 end
 
@@ -99,6 +138,12 @@ class Testing
     assert_equals(Tokenizer.new('"hello world"').tokenize, ['"hello world"'])
     assert_equals(Tokenizer.new('(append "hello world" " michael!")').tokenize, ["(", "append", '"hello world"', '" michael!"', ")"])
     assert_equals(Tokenizer.new('("1 + 2")').tokenize, ["(", '"1 + 2"', ")"])
+  end
+
+  def self.test_parser
+    assert_equals(Parser.new("123").parse, 123)
+    assert_equals(Parser.new("(123)").parse, [123])
+    assert_equals(Parser.new("(+ 1 2)").parse, [:+, 1, 2])
   end
 
   def self.assert_equals(actual, expected)
