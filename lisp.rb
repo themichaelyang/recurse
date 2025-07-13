@@ -7,6 +7,14 @@
 # You can start by implementing a single built-in function (for example, +) and add more if you have time.
 
 # Useful reference: https://norvig.com/lispy.html
+#
+# I implemented a number of things differently -- for example, my tokenizer supports string literals 
+# ("hello world"), which meant it couldn't use his neat add spaces to parens and split on whitespace trick.
+#
+# I found Norvig's `read_from_tokens` too clever (for me). It relies on CLOSE_PAREN being
+# a String, so it can be returned by atom() for L.append(read_from_tokens(tokens)) to close the Expression. 
+# I also found the state of the Array too hard to track of with pops, so I use indices and avoid treating
+# parens as atoms.
 
 SPACE = " "
 QUOTE = '"'
@@ -156,11 +164,6 @@ class Parser
     program
   end
 
-  # Note to self about Norvig's `read_from_tokens` ~> this method was a bit 
-  # too clever (for me) to extend cleanly. It relies on CLOSE_PAREN being
-  # a String and being returned by atom() for L.append(read_from_tokens(tokens)) 
-  # to close the Expression. Also, I found the state of the Array too hard to
-  # track of with pops.
   def parse_symbolic_expression(tokens, i)
     token = tokens[i]
 
