@@ -109,6 +109,20 @@ class Lexer
   def self.string_literal?(str)
     str.start_with?('"') && str.end_with?('"')
   end
+
+  def self.boolean_literal?(str)
+    str == "true" || str == "false"
+  end
+
+  def self.to_boolean(str)
+    if str == "true"
+      true
+    elsif str == "false"
+      false
+    else
+      raise "Not a boolean!"
+    end
+  end
 end
 
 #=== Grammar ====
@@ -202,6 +216,8 @@ class Parser
     elsif Lexer.string_literal?(token)
       # Remove quotes
       token[1...-1]
+    elsif Lexer.boolean_literal?(token)
+      Lexer.to_boolean(token)
     else
       token.to_sym
     end
@@ -238,6 +254,7 @@ class Testing
     assert_equals(Parser.new("(+ 1 (+ 2 3))").parse, [[:+, 1, [:+, 2, 3]]])
     assert_equals(Parser.new('(append "hello world" " michael!")').parse, [[:append, "hello world", " michael!"]])
     assert_equals(Parser.new("(+ (* 1 2 3) (- 4 5) (/ 6 7))").parse, [[:+, [:*, 1, 2, 3], [:-, 4, 5], [:/, 6, 7]]])
+    assert_equals(Parser.new("(and true false)").parse, [[:and, true, false]])
     assert_equals(Parser.new("123").parse, [123])
   end
 
@@ -256,7 +273,7 @@ class Testing
     puts "Testing..."
     puts ''
 
-    self.methods.each do |method|
+    self.methods.reverse.each do |method|
       if method.start_with?("test_")
         reset_state!
 
