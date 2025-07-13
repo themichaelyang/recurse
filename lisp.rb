@@ -154,11 +154,11 @@ class Parser
     program
   end
 
-  # Note to self about Norvig's `read_from_tokens` ~> this method is a bit 
-  # too clever (for me) to be extended cleanly. It relies on CLOSE_PAREN being
+  # Note to self about Norvig's `read_from_tokens` ~> this method was a bit 
+  # too clever (for me) to extend cleanly. It relies on CLOSE_PAREN being
   # a String and being returned by atom() for L.append(read_from_tokens(tokens)) 
-  # to close the Expression. Also, I found the pop (shift in Ruby) too hard to
-  # keep track of.
+  # to close the Expression. Also, I found the state of the Array too hard to
+  # track of with pops.
   def parse_symbolic_expression(tokens, i)
     token = tokens[i]
 
