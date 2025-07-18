@@ -230,6 +230,7 @@ class Interpreter
   # TODO for interview
 end
 
+# A self contained testing singleton that tests every method starting with `test_*`
 class Testing
   def self.debug_puts(*params)
     if @debug
