@@ -22,6 +22,8 @@ class Integer
   end
 end
 
+puts crackle_pop(1..100)
+
 # Everything below is just for testing! Feel free to ignore.
 #
 # Test me:
@@ -54,12 +56,6 @@ class Testing
   end
 end
 
-def main
-  if ARGV.include? "--test"
-    Testing.test_crackle_pop
-  else
-    puts crackle_pop(1..100)
-  end
+if ARGV.include? "--test"
+  Testing.test_crackle_pop
 end
-
-main
