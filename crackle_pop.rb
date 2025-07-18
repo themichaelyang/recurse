@@ -1,3 +1,6 @@
+# Run me:
+# > ruby crackle_pop.rb
+
 # Write a program that prints out the numbers 1 to 100 (inclusive). 
 # If the number is divisible by 3, print Crackle instead of the number. 
 # If it's divisible by 5, print Pop instead of the number. 
@@ -19,6 +22,11 @@ class Integer
   end
 end
 
+# Everything below is just for testing! Feel free to ignore.
+#
+# Test me:
+# > ruby crackle_pop.rb --test
+
 class Testing
   @@test_num = 1
 
@@ -35,7 +43,9 @@ class Testing
   def self.test_crackle_pop
     assert_equals(crackle_pop([1, 2, 7]), ["1", "2", "7"])
     assert_equals(crackle_pop([3]), ["Crackle"])
+    assert_equals(crackle_pop([6]), ["Crackle"])
     assert_equals(crackle_pop([5]), ["Pop"])
+    assert_equals(crackle_pop([10]), ["Pop"])
     assert_equals(crackle_pop([15]), ["CracklePop"])
     assert_equals(
       crackle_pop(1..15), 
