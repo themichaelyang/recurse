@@ -226,6 +226,35 @@ class Parser
   end
 end
 
+class Context < Hash
+  def initialize(parent)
+    @parent = parent
+    @bindings = {}
+  end
+
+  def set(**kv)
+    @bindings.merge!(kv)
+  end
+
+  def get(symbol)
+  end
+
+  def builtins(symbol) 
+    {
+      :+ => lambda {|parameters| parameters.sum},
+      :- => lambda {|parameters| parameters.first - parameters.last},
+      :* => lambda {|parmeters| parameters.map(&:*)},
+      :/ => lambda {|parameters| parameters.first / parameters.last}
+    }
+  end
+
+  def guard_arity(parameters, num_parameters)
+    if parameters.count != num_parameters
+      raise ArgumentError.new("Wrong number of parameters")
+    end
+  end
+end
+
 class Interpreter
   # ast = parsed list structure with tokens
   def initialize(code)
