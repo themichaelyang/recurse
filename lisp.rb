@@ -227,7 +227,41 @@ class Parser
 end
 
 class Interpreter
-  # TODO for interview
+  # ast = parsed list structure with tokens
+  def initialize(code)
+    @code = code 
+    @ast = Parser.new(@code).parse
+  end
+
+  # accepts a Program (list of expressions)
+  def interpret
+    @ast.map do |s_expr| 
+      interpret_symbolic_expression(s_expr)
+    end.last
+  end
+
+  def interpret_symbolic_expression(s_expr)
+    if s_expr.is_a? Array
+      interpret_expression(s_expr)
+    else
+      interpret_atom(s_expr)
+    end
+  end
+
+  def interpret_expression(expr)
+    function = expr.first
+    parameters = (expr[1..-1]).map do |p|
+      interpret_symbolic_expression(p)
+    end
+
+    if function == :+
+      parameters.sum
+    end
+  end
+
+  def interpret_atom(atom)
+    atom
+  end
 end
 
 # A self contained testing singleton that tests every method starting with `test_*`
@@ -257,6 +291,12 @@ class Testing
     assert_equals(Parser.new("(+ (* 1 2 3) (- 4 5) (/ 6 7))").parse, [[:+, [:*, 1, 2, 3], [:-, 4, 5], [:/, 6, 7]]])
     assert_equals(Parser.new("(and true false)").parse, [[:and, true, false]])
     assert_equals(Parser.new("123").parse, [123])
+  end
+
+  def self.test_interpreter
+    assert_equals(Interpreter.new("(+ 1 1)").interpret, 2)
+    assert_equals(Interpreter.new("(+ 1 2 3)").interpret, 6)
+    assert_equals(Interpreter.new("(+ 1 (+ 2 3))").interpret, 6)
   end
 
   def self.assert_equals(actual, expected)
