@@ -227,30 +227,55 @@ class Parser
 end
 
 class Context < Hash
-  def initialize(parent)
+  attr_reader :parent
+
+  def initialize(parent:, bindings: nil, name: "")
     @parent = parent
-    @bindings = {}
+    @name = name
+    @bindings = bindings || {}
   end
 
   def set(**kv)
     @bindings.merge!(kv)
   end
 
-  def get(symbol)
+  def find(symbol)
+    if @bindings.include?(symbol)
+      @bindings[symbol]
+    else
+      parent = self.parent
+     
+      if parent 
+        parent.find(symbol)
+      else
+        raise NameError.new("No such symbol: #{symbol}")
+      end
+    end
   end
 
-  def builtins(symbol) 
+  def self.builtins
     {
       :+ => lambda {|parameters| parameters.sum},
-      :- => lambda {|parameters| parameters.first - parameters.last},
       :* => lambda {|parmeters| parameters.map(&:*)},
-      :/ => lambda {|parameters| parameters.first / parameters.last}
+      :- => Context.arity_lambda(2) {|parameters| parameters.first - parameters.last},
+      :/ => Context.arity_lambda(2) {|parameters| parameters.first / parameters.last}
     }
   end
 
-  def guard_arity(parameters, num_parameters)
+  def self.make_root
+    Context.new(parent: nil, bindings: Context.builtins, name: "root")
+  end
+
+  def self.arity_lambda(num_parameters, &blk)
+    lambda do |parameters|
+      guard_arity(parameters, num_parameters)
+      blk.call(parameters)
+    end
+  end
+
+  def self.guard_arity(parameters, num_parameters)
     if parameters.count != num_parameters
-      raise ArgumentError.new("Wrong number of parameters")
+      raise ArgumentError.new("Wrong number of parameters. Expected: #{num_parameters} parameters, got: #{parameters.count}")
     end
   end
 end
@@ -264,32 +289,36 @@ class Interpreter
 
   # accepts a Program (list of expressions)
   def interpret
+    @global = Context.make_root
     @ast.map do |s_expr| 
-      interpret_symbolic_expression(s_expr)
+      interpret_symbolic_expression(s_expr, @global)
     end.last
   end
 
-  def interpret_symbolic_expression(s_expr)
+  def interpret_symbolic_expression(s_expr, context)
     if s_expr.is_a? Array
-      interpret_expression(s_expr)
+      interpret_expression(s_expr, context)
     else
-      interpret_atom(s_expr)
+      interpret_atom(s_expr, context)
     end
   end
 
-  def interpret_expression(expr)
-    function = expr.first
+  def interpret_expression(expr, context)
+    function_name = expr.first
     parameters = (expr[1..-1]).map do |p|
-      interpret_symbolic_expression(p)
+      interpret_symbolic_expression(p, context)
     end
 
-    if function == :+
-      parameters.sum
-    end
+    fn = context.find(function_name)
+    fn.call(parameters) 
   end
 
-  def interpret_atom(atom)
-    atom
+  def interpret_atom(atom, context)
+    if atom.is_a? Symbol
+      context.find(atom)
+    else
+      atom
+    end
   end
 end
 
@@ -326,6 +355,7 @@ class Testing
     assert_equals(Interpreter.new("(+ 1 1)").interpret, 2)
     assert_equals(Interpreter.new("(+ 1 2 3)").interpret, 6)
     assert_equals(Interpreter.new("(+ 1 (+ 2 3))").interpret, 6)
+    assert_equals(Interpreter.new("(- (+ 1 2) (/ 3 3))").interpret, 2)
   end
 
   def self.assert_equals(actual, expected)
